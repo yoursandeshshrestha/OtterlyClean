@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Image,
   ImageResizeMode,
+  ImageStyle,
   StyleSheet,
   Text,
   View,
@@ -34,7 +35,7 @@ export const PhotoImage: React.FC<PhotoImageProps> = ({
           } else {
             setImageError(true);
           }
-        } catch (error) {
+        } catch {
           setImageError(true);
         }
       } else {
@@ -64,7 +65,7 @@ export const PhotoImage: React.FC<PhotoImageProps> = ({
   return (
     <Image
       source={{ uri: imageUri }}
-      style={style}
+      style={style as ImageStyle}
       resizeMode={resizeMode}
       onError={() => setImageError(true)}
     />

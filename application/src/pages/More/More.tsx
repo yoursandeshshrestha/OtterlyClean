@@ -7,11 +7,9 @@ import {
   ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 
 export function MorePage() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
 
   const menuItems = [
     {
@@ -116,7 +114,7 @@ const styles = StyleSheet.create({
   },
   menuItemTitle: {
     fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
+    fontWeight: typography.fontWeight.semiBold,
     color: colors.text.primary,
     marginBottom: spacing.xs,
   },

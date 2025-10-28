@@ -21,13 +21,11 @@ export function DeletePage() {
   const {
     deletedAssetsData,
     clearDeletedAssets,
-    removeDeletedAsset,
     permanentlyDeleteAssets,
     restoreAssets,
   } = useGalleryState();
   const {
     selectedDeletedImages,
-    setSelectedDeletedImages,
     addSelectedDeletedImage,
     removeSelectedDeletedImage,
     clearSelectedDeletedImages,
@@ -69,9 +67,9 @@ export function DeletePage() {
 
               // If all items are deleted, navigate to home
               if (willDeleteAll) {
-                router.replace("/(tabs)");
+                router.replace("/(tabs)/" as any);
               }
-            } catch (error) {
+            } catch {
               Alert.alert("Error", "Failed to delete some images");
             }
           },
@@ -102,7 +100,7 @@ export function DeletePage() {
 
             // If all items are restored, navigate to home
             if (willRestoreAll) {
-              router.replace("/(tabs)");
+              router.replace("/(tabs)/" as any);
             }
           },
         },
@@ -131,8 +129,8 @@ export function DeletePage() {
               clearSelectedDeletedImages();
 
               // Navigate to home after deleting all
-              router.replace("/(tabs)");
-            } catch (error) {
+              router.replace("/(tabs)/" as any);
+            } catch {
               Alert.alert("Error", "Failed to delete some images");
             }
           },
@@ -158,7 +156,7 @@ export function DeletePage() {
             clearSelectedDeletedImages();
 
             // Navigate to home after restoring all
-            router.replace("/(tabs)");
+            router.replace("/(tabs)/" as any);
           },
         },
       ]

@@ -50,10 +50,7 @@ export default function OrganizePage() {
   const {
     organizePhotos: photos,
     deletedAssets,
-    deletedAssetsData,
     lastDeletedImageId,
-    processedPhotosCount,
-    totalPhotosToProcess,
     organizeCurrentIndex,
     setOrganizePhotos,
     setOrganizeCurrentIndex,
@@ -152,6 +149,7 @@ export default function OrganizePage() {
           setTotalPhotosToProcess(filteredPhotos.length);
         }
       } catch (error) {
+        console.error(error);
       } finally {
         setLoading(false);
       }

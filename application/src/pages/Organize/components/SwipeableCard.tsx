@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import * as MediaLibrary from "expo-media-library";
 import React, { forwardRef, useImperativeHandle } from "react";
-import { Dimensions, StyleSheet, Text, View } from "react-native";
+import { Dimensions, StyleSheet } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   interpolate,
@@ -31,7 +31,10 @@ export interface SwipeableCardRef {
 }
 
 export const SwipeableCard = forwardRef<SwipeableCardRef, SwipeableCardProps>(
-  ({ asset, index, totalCards, onSwipeLeft, onSwipeRight, isActive }, ref) => {
+  function SwipeableCard(
+    { asset, index, totalCards, onSwipeLeft, onSwipeRight, isActive },
+    ref
+  ) {
     const translateX = useSharedValue(0);
     const translateY = useSharedValue(0);
     const scale = useSharedValue(1);

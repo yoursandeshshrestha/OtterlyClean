@@ -17,7 +17,7 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
 
   const handlePress = () => {
     router.push({
-      pathname: "/organize",
+      pathname: "/organize" as any,
       params: {
         categoryId: category.id,
         categoryTitle: category.title,

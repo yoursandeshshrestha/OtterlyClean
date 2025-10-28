@@ -4,7 +4,6 @@ import React, {
   useCallback,
   useImperativeHandle,
   useRef,
-  useState,
 } from "react";
 import { Dimensions, StyleSheet, View } from "react-native";
 import { SwipeableCard, SwipeableCardRef } from "./SwipeableCard";
