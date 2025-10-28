@@ -34,7 +34,7 @@ export const PhotoImage: React.FC<PhotoImageProps> = ({
           } else {
             setImageError(true);
           }
-        } catch (error) {
+        } catch {
           setImageError(true);
         }
       } else {

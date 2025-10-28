@@ -3,14 +3,6 @@ import * as MediaLibrary from "expo-media-library";
 import { useEffect, useState } from "react";
 
 // Helper functions for date filtering
-const isToday = (date: Date): boolean => {
-  const today = new Date();
-  return (
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear()
-  );
-};
 
 const isOnThisDay = (date: Date): boolean => {
   const today = new Date();
@@ -155,7 +147,8 @@ export const usePhotos = () => {
       }
 
       setCategories(photoCategories);
-    } catch (error) {
+    } catch {
+      // Handle error silently
     } finally {
       setLoading(false);
     }

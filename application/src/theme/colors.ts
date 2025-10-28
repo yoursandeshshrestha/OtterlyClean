@@ -56,12 +56,6 @@ export const colors = {
     purple: "#6A3ABF",
   },
 
-  // Status colors
-  success: "#10B981",
-  warning: "#F7C948", // Yellow from broom
-  error: "#EF4444",
-  info: "#3B82F6",
-
   // Interactive states
   interactive: {
     hover: "#8B5CF6", // Light purple
