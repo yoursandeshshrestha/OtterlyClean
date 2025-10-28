@@ -11,7 +11,7 @@ import { SwipeableCard, SwipeableCardRef } from "./SwipeableCard";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-interface CardStackProps {
+export interface CardStackProps {
   assets: MediaLibrary.Asset[];
   currentIndex: number;
   onSwipeLeft: (assetId: string) => void;

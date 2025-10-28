@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import * as MediaLibrary from "expo-media-library";
 import React, { forwardRef, useImperativeHandle } from "react";
-import { Dimensions, StyleSheet } from "react-native";
+import { Dimensions, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   interpolate,

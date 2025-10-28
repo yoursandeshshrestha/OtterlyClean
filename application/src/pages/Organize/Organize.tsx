@@ -1,16 +1,7 @@
-import { useAppDispatch, useAppSelector } from "@/src/store/hooks";
-import { useAppState, useGalleryState, useUIState } from "@/src/store/hooks/useAppState";
-import {
-  addOrganizeDeletedImage,
-  clearOrganizeState,
-  deleteAsset,
-  setOrganizePhotos,
-  setOrganizeCurrentIndex,
-  undoLastOrganizeDelete,
-} from "@/src/store/slices/gallerySlice";
+import { useAppState, useUIState, useGalleryState } from "@/src/store";
 import * as MediaLibrary from "expo-media-library";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -25,7 +16,6 @@ import { CardStack, CardStackRef } from "./components/CardStack";
 import { ImageInfo } from "./components/ImageInfo";
 import { ScreenHeader } from "./components/ScreenHeader";
 
-// Helper functions for date filtering
 const isInLastNDays = (date: Date, days: number): boolean => {
   const today = new Date();
   const nDaysAgo = new Date(today);
@@ -48,27 +38,45 @@ const isInMonth = (date: Date, month: number, year: number): boolean => {
 
 export default function OrganizePage() {
   const router = useRouter();
-  const dispatch = useAppDispatch();
   const params = useLocalSearchParams<{
     categoryId: string;
     categoryTitle: string;
   }>();
 
-  // Get state from Redux
+  // Track the previous category to detect category changes
+  const previousCategoryRef = useRef<string | null>(null);
+
+  // Get state from Zustand stores
   const {
     organizePhotos: photos,
-    organizeDeletedImageIds,
-    organizeLastDeletedImageId: lastDeletedImageId,
+    deletedAssets,
+    deletedAssetsData,
+    lastDeletedImageId,
+    processedPhotosCount,
+    totalPhotosToProcess,
     organizeCurrentIndex,
-  } = useAppSelector((state) => state.gallery);
+    setOrganizePhotos,
+    setOrganizeCurrentIndex,
+    resetOrganizeProgress,
+    undoLastDelete,
+    deleteAsset,
+    setTotalPhotosToProcess,
+    incrementProcessedPhotos,
+    resetProcessedPhotos,
+  } = useGalleryState();
 
   // Calculate the actual position in the original photos array
   const actualCurrentIndex = organizeCurrentIndex;
 
   // Use custom hooks for state management
-  const { loading, setLoading, mediaLibraryPermission, setMediaLibraryPermission } = useAppState();
+  const {
+    loading,
+    setLoading,
+    mediaLibraryPermission,
+    setMediaLibraryPermission,
+  } = useAppState();
   const { showConfirmation, setShowConfirmation } = useUIState();
-  
+
   const cardStackRef = useRef<CardStackRef>(null);
 
   const filterPhotosByCategory = (
@@ -121,6 +129,16 @@ export default function OrganizePage() {
         if (status === "granted") {
           const categoryId = params.categoryId || "all-photos";
 
+          // Reset progress only when category changes (not on initial load or return from other screens)
+          if (
+            previousCategoryRef.current !== null &&
+            previousCategoryRef.current !== categoryId
+          ) {
+            resetOrganizeProgress();
+            resetProcessedPhotos();
+          }
+          previousCategoryRef.current = categoryId;
+
           const { assets } = await MediaLibrary.getAssetsAsync({
             first: 10000,
             mediaType: ["photo"],
@@ -128,25 +146,64 @@ export default function OrganizePage() {
           });
 
           const filteredPhotos = filterPhotosByCategory(assets, categoryId);
-          dispatch(setOrganizePhotos(filteredPhotos));
+          setOrganizePhotos(filteredPhotos);
+
+          // Set total photos to process for this session
+          setTotalPhotosToProcess(filteredPhotos.length);
         }
       } catch (error) {
-        console.error("Error loading photos:", error);
       } finally {
         setLoading(false);
       }
     };
 
     loadPhotos();
-  }, [params.categoryId, dispatch, setMediaLibraryPermission, setLoading]);
+  }, [
+    params.categoryId,
+    setMediaLibraryPermission,
+    setLoading,
+    setOrganizePhotos,
+    resetOrganizeProgress,
+    setTotalPhotosToProcess,
+    resetProcessedPhotos,
+  ]);
 
-  // Reset state when screen comes back into focus (e.g., from delete screen)
+  // Handle returning from delete page - preserve progress but update state
   useFocusEffect(
     useCallback(() => {
-      // Clear organize state when returning to this screen
-      dispatch(clearOrganizeState());
       setShowConfirmation(false);
-    }, [dispatch, setShowConfirmation])
+
+      // When returning from delete page, we need to ensure the organize state
+      // is properly synced with any changes made on the delete page
+      // The organizeDeletedImageIds should already be updated by the delete/restore functions
+      // but we need to make sure the current index is still valid
+
+      // Filter out deleted images to get visible photos
+      const visiblePhotos = photos.filter(
+        (photo: MediaLibrary.Asset) => !deletedAssets.includes(photo.id)
+      );
+
+      // If current index is beyond the visible photos, adjust it
+      if (
+        organizeCurrentIndex >= visiblePhotos.length &&
+        visiblePhotos.length > 0
+      ) {
+        // Set to the last available photo
+        setOrganizeCurrentIndex(visiblePhotos.length - 1);
+      }
+
+      // If all photos have been deleted, reset the organize state
+      if (visiblePhotos.length === 0 && photos.length > 0) {
+        resetOrganizeProgress();
+      }
+    }, [
+      setShowConfirmation,
+      photos,
+      deletedAssets,
+      organizeCurrentIndex,
+      setOrganizeCurrentIndex,
+      resetOrganizeProgress,
+    ])
   );
 
   const handleBackPress = () => {
@@ -154,20 +211,23 @@ export default function OrganizePage() {
   };
 
   const handleDeletePress = () => {
-    // Sync deleted images to Redux store
-    organizeDeletedImageIds.forEach((imageId) => {
-      const asset = photos.find((photo) => photo.id === imageId);
-      if (asset) {
-        dispatch(deleteAsset({ assetId: imageId, asset }));
-      }
-    });
-
+    // Deleted images are already synced to main state in handleImageDelete
     // Navigate to delete page to view all deleted images
-    router.push("/delete");
+    router.push("/delete" as any);
   };
 
-  const handleImageDelete = (imageId: string) => {
-    dispatch(addOrganizeDeletedImage(imageId));
+  const handleImageDelete = async (imageId: string) => {
+    // Find the asset to add to main deleted state
+    const asset = photos.find(
+      (photo: MediaLibrary.Asset) => photo.id === imageId
+    );
+    if (asset) {
+      deleteAsset(imageId, asset);
+    }
+
+    // Increment processed photos count
+    incrementProcessedPhotos();
+
     // Don't increment index - the next photo will move into the current position
     // Check if we've processed all remaining photos
     if (organizeCurrentIndex >= visiblePhotos.length - 1) {
@@ -177,47 +237,44 @@ export default function OrganizePage() {
   };
 
   const handleImageKeep = () => {
+    // Increment processed photos count
+    incrementProcessedPhotos();
+
     // Move to next card
     const newIndex = organizeCurrentIndex + 1;
     if (newIndex >= visiblePhotos.length) {
       // Use setTimeout to avoid setState during render
       setTimeout(() => setShowConfirmation(true), 0);
     } else {
-      dispatch(setOrganizeCurrentIndex(newIndex));
+      setOrganizeCurrentIndex(newIndex);
     }
   };
 
-  const handleAllCardsProcessed = () => {
+  const handleAllCardsProcessed = async () => {
     setShowConfirmation(true);
   };
 
   const handleUndo = () => {
     if (!lastDeletedImageId) return;
-    dispatch(undoLastOrganizeDelete());
+    undoLastDelete();
     // Move back to previous index when undoing
     if (organizeCurrentIndex > 0) {
-      dispatch(setOrganizeCurrentIndex(organizeCurrentIndex - 1));
+      setOrganizeCurrentIndex(organizeCurrentIndex - 1);
     }
   };
 
   const handleConfirmDelete = () => {
-    if (organizeDeletedImageIds.length === 0) return;
+    if (deletedAssets.length === 0) return;
 
-    // Sync deleted images to Redux store
-    organizeDeletedImageIds.forEach((imageId) => {
-      const asset = photos.find((photo) => photo.id === imageId);
-      if (asset) {
-        dispatch(deleteAsset({ assetId: imageId, asset }));
-      }
-    });
+    // Deleted images are already synced to store in handleImageDelete
 
     // Navigate to delete page to view and manage deleted images
-    router.push("/delete");
+    router.push("/delete" as any);
   };
 
   // Filter out deleted images only
   const visiblePhotos = photos.filter(
-    (photo) => !organizeDeletedImageIds.includes(photo.id)
+    (photo: MediaLibrary.Asset) => !deletedAssets.includes(photo.id)
   );
 
   const headerTitle = params.categoryTitle || "Organize";
@@ -278,7 +335,7 @@ export default function OrganizePage() {
   }
 
   if (showConfirmation) {
-    if (organizeDeletedImageIds.length === 0) {
+    if (deletedAssets.length === 0) {
       // No images deleted - show completion message
       return (
         <SafeAreaView style={styles.container}>
@@ -312,13 +369,13 @@ export default function OrganizePage() {
         <ScreenHeader
           title={headerTitle}
           onBackPress={handleBackPress}
-          deleteCount={organizeDeletedImageIds.length}
+          deleteCount={deletedAssets.length}
         />
         <View style={styles.confirmationContainer}>
           <View style={styles.confirmationContent}>
             <Text style={styles.confirmationTitle}>
-              You chose to delete {organizeDeletedImageIds.length} picture
-              {organizeDeletedImageIds.length > 1 ? "s" : ""}
+              You chose to delete {deletedAssets.length} picture
+              {deletedAssets.length > 1 ? "s" : ""}
             </Text>
             <TouchableOpacity
               style={styles.confirmDeleteButton}
@@ -343,49 +400,51 @@ export default function OrganizePage() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <BackgroundPattern />
-      <ScreenHeader
-        title={headerTitle}
-        onBackPress={handleBackPress}
-        onDeletePress={handleDeletePress}
-        deleteCount={organizeDeletedImageIds.length}
-      />
-
-      {!showConfirmation && visiblePhotos.length > 0 && (
-        <ImageInfo
-          currentIndex={actualCurrentIndex}
-          totalImages={visiblePhotos.length}
-          timestamp={
-            visiblePhotos[organizeCurrentIndex]?.creationTime || Date.now()
-          }
+    <>
+      <SafeAreaView style={styles.container}>
+        <BackgroundPattern />
+        <ScreenHeader
+          title={headerTitle}
+          onBackPress={handleBackPress}
+          onDeletePress={handleDeletePress}
+          deleteCount={deletedAssets.length}
         />
-      )}
 
-      <View style={styles.cardStackContainer}>
-        <CardStack
-          ref={cardStackRef}
-          assets={visiblePhotos}
-          currentIndex={organizeCurrentIndex}
-          onSwipeLeft={handleImageDelete}
-          onSwipeRight={handleImageKeep}
-          onAllCardsProcessed={handleAllCardsProcessed}
-        />
-      </View>
+        {!showConfirmation && visiblePhotos.length > 0 && (
+          <ImageInfo
+            currentIndex={actualCurrentIndex}
+            totalImages={visiblePhotos.length}
+            timestamp={
+              visiblePhotos[organizeCurrentIndex]?.creationTime || Date.now()
+            }
+          />
+        )}
 
-      {!showConfirmation && visiblePhotos.length > 0 && (
-        <ActionButtons
-          onDelete={() =>
-            handleImageDelete(visiblePhotos[organizeCurrentIndex]?.id || "")
-          }
-          onKeep={handleImageKeep}
-          onUndo={handleUndo}
-          canUndo={!!lastDeletedImageId}
-          onSwipeLeft={() => cardStackRef.current?.swipeLeft()}
-          onSwipeRight={() => cardStackRef.current?.swipeRight()}
-        />
-      )}
-    </SafeAreaView>
+        <View style={styles.cardStackContainer}>
+          <CardStack
+            ref={cardStackRef}
+            assets={visiblePhotos}
+            currentIndex={organizeCurrentIndex}
+            onSwipeLeft={handleImageDelete}
+            onSwipeRight={handleImageKeep}
+            onAllCardsProcessed={handleAllCardsProcessed}
+          />
+        </View>
+
+        {!showConfirmation && visiblePhotos.length > 0 && (
+          <ActionButtons
+            onDelete={() =>
+              handleImageDelete(visiblePhotos[organizeCurrentIndex]?.id || "")
+            }
+            onKeep={handleImageKeep}
+            onUndo={handleUndo}
+            canUndo={!!lastDeletedImageId}
+            onSwipeLeft={() => cardStackRef.current?.swipeLeft()}
+            onSwipeRight={() => cardStackRef.current?.swipeRight()}
+          />
+        )}
+      </SafeAreaView>
+    </>
   );
 }
 

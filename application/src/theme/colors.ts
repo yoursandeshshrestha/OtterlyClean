@@ -5,14 +5,32 @@
 
 export const colors = {
   // Primary colors from the otter icon
-  primary: {
-    purple: "#6A3ABF", // Background purple
-    brown: "#A87C5B", // Otter main fur
-    cream: "#F2E8D5", // Otter belly/face
-    darkBlue: "#3A2D5C", // Eyes, nose, details
-    yellow: "#F7C948", // Broom bristles
-    white: "#FFFFFF", // Outline
-  },
+  primary: "#6A3ABF", // Background purple
+  secondary: "#A87C5B", // Otter main fur
+  accent: "#F7C948", // Broom bristles
+
+  // Basic colors
+  white: "#FFFFFF",
+  black: "#000000",
+
+  // Gray scale
+  gray50: "#F9FAFB",
+  gray100: "#F3F4F6",
+  gray200: "#E5E7EB",
+  gray300: "#D1D5DB",
+  gray400: "#9CA3AF",
+  gray500: "#6B7280",
+  gray600: "#4B5563",
+  gray700: "#374151",
+  gray800: "#1F2937",
+  gray900: "#111827",
+
+  // Status colors
+  success: "#10B981",
+  warning: "#F7C948", // Yellow from broom
+  error: "#EF4444",
+  info: "#3B82F6",
+  green: "#10B981",
 
   // Extended palette for UI components
   background: {

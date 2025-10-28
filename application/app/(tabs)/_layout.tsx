@@ -1,24 +1,43 @@
+import { DeleteButton } from "@/src/components/DeleteButton";
 import { HomeIcon, MoreIcon } from "@/src/components/TabIcons";
+import { useGalleryState } from "@/src/store";
 import { colors, spacing, typography } from "@/src/theme";
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import { Image, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { deletedAssetsData } = useGalleryState();
+
+  const handleDeletePress = () => {
+    router.push("../delete");
+  };
 
   return (
     <View style={{ flex: 1 }}>
       {/* Top Header */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <View style={styles.titleContainer}>
-          <Image
-            source={require("@/assets/images/app-icon-transparent.png")}
-            style={styles.appIcon}
-          />
-          <Text style={styles.title}>OtterlyClean</Text>
+        <View style={styles.headerContent}>
+          <View style={styles.titleContainer}>
+            <View style={styles.titleContainerContent}>
+              <Image
+                source={require("@/assets/images/app-icon-transparent.png")}
+                style={styles.appIcon}
+              />
+              <Text style={styles.title}>OtterlyClean</Text>
+            </View>
+
+            <Text style={styles.subtitle}>Organize your gallery with ease</Text>
+          </View>
+          {deletedAssetsData.length > 0 && (
+            <DeleteButton
+              onPress={handleDeletePress}
+              count={deletedAssetsData.length}
+            />
+          )}
         </View>
-        <Text style={styles.subtitle}>Organize your gallery with ease</Text>
       </View>
 
       <Tabs
@@ -77,14 +96,23 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     backgroundColor: colors.background.primary,
     paddingHorizontal: spacing.layout.screenPadding,
-    paddingVertical: spacing.md,
-    alignItems: "flex-start",
+    paddingBottom: spacing.md,
+  },
+  headerContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   titleContainer: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+  },
+  titleContainerContent: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    marginBottom: spacing.xs,
   },
   appIcon: {
     width: 32,

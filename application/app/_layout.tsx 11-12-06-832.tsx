@@ -1,11 +1,9 @@
 import { SplashScreen } from "@/src/components/SplashScreen";
-import { store } from "@/src/store";
-import { useAppState } from "@/src/store/hooks/useAppState";
+import { useAppState } from "@/src/store";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Provider } from "react-redux";
 
 function AppContent() {
   const { showSplash, setShowSplash } = useAppState();
@@ -33,9 +31,7 @@ function AppContent() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Provider store={store}>
-        <AppContent />
-      </Provider>
+      <AppContent />
     </GestureHandlerRootView>
   );
 }

@@ -156,7 +156,6 @@ export const usePhotos = () => {
 
       setCategories(photoCategories);
     } catch (error) {
-      console.error("Error fetching categories:", error);
     } finally {
       setLoading(false);
     }

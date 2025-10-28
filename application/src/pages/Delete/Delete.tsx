@@ -1,9 +1,4 @@
-import { useAppDispatch, useAppSelector } from "@/src/store/hooks";
-import { useUIState } from "@/src/store/hooks/useAppState";
-import {
-  clearDeletedAssets,
-  removeDeletedAsset,
-} from "@/src/store/slices/gallerySlice";
+import { useUIState, useGalleryState } from "@/src/store";
 import * as MediaLibrary from "expo-media-library";
 import { useRouter } from "expo-router";
 import { Check } from "lucide-react-native";
@@ -23,8 +18,13 @@ import { ScreenHeader } from "./components/ScreenHeader";
 export function DeletePage() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const dispatch = useAppDispatch();
-  const { deletedAssetsData } = useAppSelector((state) => state.gallery);
+  const {
+    deletedAssetsData,
+    clearDeletedAssets,
+    removeDeletedAsset,
+    permanentlyDeleteAssets,
+    restoreAssets,
+  } = useGalleryState();
   const {
     selectedDeletedImages,
     setSelectedDeletedImages,
@@ -59,17 +59,19 @@ export function DeletePage() {
           onPress: async () => {
             try {
               const assetIds = Array.from(selectedDeletedImages);
+              const willDeleteAll =
+                deletedAssetsData.length === assetIds.length;
+
               await MediaLibrary.deleteAssetsAsync(assetIds);
-              // Remove from Redux state
-              assetIds.forEach((id) => dispatch(removeDeletedAsset(id)));
+              // Remove from state using the new function that syncs organize state
+              permanentlyDeleteAssets(assetIds);
               clearSelectedDeletedImages();
 
               // If all items are deleted, navigate to home
-              if (deletedAssetsData.length === assetIds.length) {
+              if (willDeleteAll) {
                 router.replace("/(tabs)");
               }
             } catch (error) {
-              console.error("Error deleting assets:", error);
               Alert.alert("Error", "Failed to delete some images");
             }
           },
@@ -91,14 +93,15 @@ export function DeletePage() {
         {
           text: "Restore",
           onPress: () => {
-            // Remove from Redux state (restore)
-            Array.from(selectedDeletedImages).forEach((id) =>
-              dispatch(removeDeletedAsset(id))
-            );
+            // Remove from state using the new function that syncs organize state
+            const assetIds = Array.from(selectedDeletedImages);
+            const willRestoreAll = deletedAssetsData.length === count;
+
+            restoreAssets(assetIds);
             clearSelectedDeletedImages();
 
             // If all items are restored, navigate to home
-            if (deletedAssetsData.length === count) {
+            if (willRestoreAll) {
               router.replace("/(tabs)");
             }
           },
@@ -123,13 +126,13 @@ export function DeletePage() {
             try {
               const assetIds = deletedAssetsData.map((asset) => asset.id);
               await MediaLibrary.deleteAssetsAsync(assetIds);
-              dispatch(clearDeletedAssets());
+              // Use clearDeletedAssets which now also clears organize state
+              clearDeletedAssets();
               clearSelectedDeletedImages();
 
               // Navigate to home after deleting all
               router.replace("/(tabs)");
             } catch (error) {
-              console.error("Error deleting all assets:", error);
               Alert.alert("Error", "Failed to delete some images");
             }
           },
@@ -150,7 +153,8 @@ export function DeletePage() {
         {
           text: "Restore All",
           onPress: () => {
-            dispatch(clearDeletedAssets());
+            // Use clearDeletedAssets which now also clears organize state
+            clearDeletedAssets();
             clearSelectedDeletedImages();
 
             // Navigate to home after restoring all

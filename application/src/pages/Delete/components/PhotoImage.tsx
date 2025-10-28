@@ -35,7 +35,6 @@ export const PhotoImage: React.FC<PhotoImageProps> = ({
             setImageError(true);
           }
         } catch (error) {
-          console.error("Error loading asset info:", error);
           setImageError(true);
         }
       } else {
